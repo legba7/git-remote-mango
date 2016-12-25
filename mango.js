@@ -2,8 +2,10 @@ var async = require('async')
 var pull = require('pull-stream')
 var multicb = require('multicb')
 var crypto = require('crypto')
-var IPFS = require('ipfs')
-var ipfs = new IPFS()
+// var IPFS = require('ipfs')
+// var ipfs = new IPFS()
+var XMLHttpRequest = require("node-XMLHttpRequest").XMLHttpRequest;
+
 var Web3 = require('web3')
 var rlp = require('rlp')
 var ethUtil = require('ethereumjs-util')
@@ -44,6 +46,7 @@ function ipfsGet (key, cb) {
 
 module.exports = Repo
 
+
 function Repo (address, user) {
   // console.error('LOADING REPO', address)
 
@@ -57,21 +60,42 @@ function Repo (address, user) {
 }
 
 Repo.prototype.swarmPut = function (buf, enc, cb) {
-  this.web3.bzz.put(buf, 'application/mango+git', function (err, ret) {
-    if (err) {
-      return cb(err)
-    }
-    cb(null, ret)
-  })
+    //    this.web3.bzz.put(buf, 'application/mango+git', function (err, ret) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST","http://localhost:8500/bzzr:/")
+    xhr.setRequestHeader('Content-Type', "application/mango+git");
+    xhr.send(buf);
+
+    xhr.onreadystatechange = function() {
+        if (this.readyState === 4) {
+	    var key = this.responseText;
+	    cb(null, key);
+	    if(this.responseText.length!=64){
+		var error = this.responseText;
+		console.error('swarmPUT error' + error)
+		cb(error, null);
+		return;
+	    }
+	}
+    };
+  //   if (err) {
+  //     return cb(err)
+  //   }
+  //   cb(null, ret)
+  // })
 }
 
 Repo.prototype.swarmGet = function (key, cb) {
-  this.web3.bzz.get('bzz://' + key, function (err, ret) {
-    if (err) {
-      return cb(err)
-    }
-    cb(null, ret.content)
-  })
+    //    this.web3.bzz.get('bzz://' + key, function (err, ret) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET","http://localhost:8500/bzzr:/"+key)
+    xhr.setRequestHeader('Content-Type', "text/plain; charset=utf-8");
+    xhr.send();
+  //   if (err) {
+  //     return cb(err)
+  //   }
+  //   cb(null, ret.content)
+  // })
 }
 
 Repo.prototype._loadObjectMap = function (cb) {
@@ -219,7 +243,7 @@ Repo.prototype.getObject = function (hash, cb) {
 }
 
 Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
-  // console.error('UPDATE')
+  console.error('UPDATE')
 
   var done = multicb({pluck: 1})
   var self = this
@@ -228,7 +252,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
     var doneReadingObjects = function () {
       self.swarmPut(snapshot.create(self._objectMap), null, function (err, ipfsHash) {
         if (err) {
-          return done(err)
+          return done( err )
         }
 
         self.snapshotAdd(ipfsHash, function () {
@@ -310,7 +334,7 @@ Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
   }
 
   done(function (err) {
-    if (err) {
+      if (err) {
       return cb(err)
     }
     cb()
