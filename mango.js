@@ -60,7 +60,6 @@ function Repo (address, user) {
 }
 
 Repo.prototype.swarmPut = function (buf, enc, cb) {
-    //    this.web3.bzz.put(buf, 'application/mango+git', function (err, ret) {
     var xhr = new XMLHttpRequest();
     xhr.open("POST","http://localhost:8500/bzzr:/")
     xhr.setRequestHeader('Content-Type', "application/mango+git");
@@ -70,32 +69,33 @@ Repo.prototype.swarmPut = function (buf, enc, cb) {
         if (this.readyState === 4) {
 	    var key = this.responseText;
 	    cb(null, key);
+	    console.error('debug swarmPut key: ' + key)
 	    if(this.responseText.length!=64){
 		var error = this.responseText;
-		console.error('swarmPUT error' + error)
+		console.error('debug swarmPut error' + error)
 		cb(error, null);
 		return;
 	    }
 	}
     };
-  //   if (err) {
-  //     return cb(err)
-  //   }
-  //   cb(null, ret)
-  // })
 }
 
 Repo.prototype.swarmGet = function (key, cb) {
-    //    this.web3.bzz.get('bzz://' + key, function (err, ret) {
+    console.error('debug swarmGet key: ' + key)
     var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+    if (this.readyState === 4) {
+	console.error("Complete.\nBody length: " + this.responseText.length);
+	// console.error("Body:\n" + this.responseText);
+	var ret = this.responseText;
+	cb(null, ret);
+	return;
+    }
+    };
     xhr.open("GET","http://localhost:8500/bzzr:/"+key)
-    xhr.setRequestHeader('Content-Type', "text/plain; charset=utf-8");
+    xhr.setRequestHeader('Content-Type', "application/mango+git");
     xhr.send();
-  //   if (err) {
-  //     return cb(err)
-  //   }
-  //   cb(null, ret.content)
-  // })
+
 }
 
 Repo.prototype._loadObjectMap = function (cb) {
@@ -243,7 +243,7 @@ Repo.prototype.getObject = function (hash, cb) {
 }
 
 Repo.prototype.update = function (readRefUpdates, readObjects, cb) {
-  console.error('UPDATE')
+  // console.error('UPDATE')
 
   var done = multicb({pluck: 1})
   var self = this
